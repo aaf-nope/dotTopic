@@ -85,7 +85,7 @@ The `seed.py` script quickly populates an empty SQLite database with a realistic
 
 ### 1. Clone the repository & create a virtual environment
 ```bash
-git clone https://github.com/your-username/dottopic.git
+git clone https://github.com/aaf-nope/dottopic.git
 cd dottopic
 
 # Create a virtual environment
