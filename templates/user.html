@@ -1,0 +1,155 @@
+{# Template: user.html #}
+{# Purpose: Renders the user view #}
+{#
+user.html – User Profile Page
+================================
+Route: /u/<username>
+    Chapter 17: Jinja2 template inheritance, conditionals.
+    #}
+    {% extends 'base.html' %}
+
+    {% block title %}{{ profile_user.username }}{% endblock %}
+    {% block meta_desc %}View {{ profile_user.username }}'s posts on dotTopic.{% endblock %}
+
+
+    {# ════════════════════════════════════════════════════════════
+    LEFT SIDEBAR – empty on user page
+    ════════════════════════════════════════════════════════════ #}
+    {% block sidebar_left %}
+    {% if is_own_profile %}
+    {# Quick account settings for own profile #}
+    <div class="sidebar-card">
+        <h3>Quick Settings</h3>
+
+        <button class="sidebar-nav-link"
+            style="width:100%; border:none; background:none; cursor:pointer; text-align:left;"
+            onclick="openModal('account-modal'); $('[data-panel=email]').click();">
+            <span class="icon">✉️</span> Change Email
+        </button>
+
+        <button class="sidebar-nav-link"
+            style="width:100%; border:none; background:none; cursor:pointer; text-align:left;"
+            onclick="openModal('account-modal'); $('[data-panel=username]').click();">
+            <span class="icon">👤</span> Change Username
+        </button>
+
+        <button class="sidebar-nav-link"
+            style="width:100%; border:none; background:none; cursor:pointer; text-align:left;"
+            onclick="openModal('account-modal'); $('[data-panel=password]').click();">
+            <span class="icon">🔑</span> Change Password
+        </button>
+
+        <button class="sidebar-nav-link"
+            style="width:100%; border:none; background:none; cursor:pointer; text-align:left;"
+            onclick="openModal('account-modal'); $('[data-panel=avatar]').click();">
+            <span class="icon">🖼️</span> Change Avatar
+        </button>
+    </div>
+    {% endif %}
+    {% endblock %}
+
+
+    {# ════════════════════════════════════════════════════════════
+    MAIN CONTENT
+    ════════════════════════════════════════════════════════════ #}
+    {% block content %}
+
+    {# ── User Profile Header ── #}
+    <section class="user-profile-header">
+
+        {# ── Profile picture (circle via border-radius: 8px) ── #}
+        {% if profile_user.profile_pic %}
+            <img class="user-profile-avatar" src="{{ url_for('static', filename=profile_user.profile_pic) }}"
+                alt="{{ profile_user.username }}'s profile picture" style="border-radius: 8px;">
+        {% else %}
+            <img class="user-profile-avatar" src="{{ url_for('static', filename='images/default_pfp.png') }}"
+                alt="{{ profile_user.username }}'s profile picture" style="border-radius: 8px;">
+        {% endif %}
+
+        {# ── User info ── #}
+        <div class="user-profile-info">
+
+            <h1>
+                {{ profile_user.username }}
+                {% if profile_user.is_super_admin %}
+                <span title="Super Admin" style="font-size:0.75rem; background:var(--accent);
+                                 color:#000; border-radius:9999px;
+                                 padding:0.1rem 0.5rem; font-weight:700;">
+                    ADMIN
+                </span>
+                {% endif %}
+            </h1>
+
+            <p class="join-date">
+                Joined {{ profile_user.created_at.strftime('%B %Y') }}
+            </p>
+
+            {# User stats #}
+            <div class="user-stats">
+                <div class="stat-item">
+                    <span class="stat-value">{{ posts | length }}</span>
+                    <span class="stat-label">Posts</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">{{ profile_user.subscriptions | length }}</span>
+                    <span class="stat-label">Topics</span>
+                </div>
+            </div>
+
+        </div>
+
+        {# ── Upload new avatar (own profile only) ── #}
+        {% if is_own_profile %}
+        <form action="{{ url_for('users.change_avatar') }}" method="POST" enctype="multipart/form-data"
+            style="margin-left:auto;">
+            <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
+                📷 Change Photo
+                <input type="file" name="avatar" accept="image/*" style="display:none;" onchange="this.form.submit()">
+            </label>
+        </form>
+        {% endif %}
+
+    </section>
+
+    {# ── Posts Section ── #}
+    <div class="section-title">
+        📝 Posts by {{ profile_user.username }}
+    </div>
+
+    {% if posts %}
+    <div class="post-grid">
+        {% for post in posts %}
+        {# The post_card partial checks is_own_profile to show edit/delete #}
+        {% set show_owner_controls = is_own_profile %}
+        {% include 'partials/post_card.html' %}
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+        <span class="empty-icon">📭</span>
+        {% if is_own_profile %}
+        <p>You haven't posted anything yet.</p>
+        <p style="font-size:0.85rem; margin-top:0.5rem;">
+            Join a topic and share your thoughts!
+        </p>
+        {% else %}
+        <p>{{ profile_user.username }} hasn't posted anything yet.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% endblock %}
+
+
+    {# ════════════════════════════════════════════════════════════
+    RIGHT SIDEBAR
+    ════════════════════════════════════════════════════════════ #}
+    {% block sidebar_right %}
+    <div class="sidebar-card">
+        <h3>Member Since</h3>
+        <p style="font-size:0.85rem; color:var(--text-muted);">
+            {{ profile_user.created_at.strftime('%B %d, %Y') }}
+        </p>
+    </div>
+    {% endblock %}

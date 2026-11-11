@@ -1,0 +1,195 @@
+{# Template: post_card.html #}
+{# Purpose: Renders the post_card view #}
+{#
+   partials/post_card.html – Reusable Post Card Component
+   =========================================================
+   Chapter 17: Jinja2 partial ({% include %}).
+   Used in: home.html, topic.html, user.html, search.html.
+
+   Variables expected from parent template:
+     - post            : a Post model object
+     - is_moderator    : boolean (optional, defaults to false)
+     - show_owner_controls : boolean (optional, for user page edit/delete)
+#}
+
+{# Determine if the current user can edit/delete this specific post #}
+{% set can_delete = current_user.is_authenticated and (
+    current_user.id == post.user_id or
+    (is_moderator is defined and is_moderator)
+) %}
+
+{% set can_edit = current_user.is_authenticated and current_user.id == post.user_id %}
+
+  <div class="post-card {% if post.is_pinned %}pinned{% endif %}" id="post-{{ post.id }}"
+       data-post-id="{{ post.id }}"
+       data-href="{{ url_for('topics.post_detail', topic_name=post.topic.name, post_id=post.id) }}"
+       style="cursor:pointer;">
+
+    {# ── Pinned badge ── #}
+    <div class="pin-badge">📌 Pinned</div>
+
+    {# ── Card Meta: Topic + Author + Date ── #}
+    <div class="post-card-meta">
+        <a href="{{ url_for('topics.topic_page', topic_name=post.topic.name) }}"
+           class="topic-link topic-name-link"
+           style="position:relative; z-index:2;"
+           onclick="event.stopPropagation();">
+            .{{ post.topic.name }}
+        </a>
+
+        <span>•</span>
+
+        <div class="user-badges" data-user-id="{{ post.author.id }}" style="display:inline-flex; align-items:center; gap:4px;">
+            <a href="{{ url_for('users.user_profile', username=post.author.username) }}"
+               class="user-link user-name-link"
+               style="position:relative; z-index:2;"
+               onclick="event.stopPropagation();">
+                {{ post.author.username }}
+            </a>
+            {% if post.author.id == post.topic.creator_id %}
+                <span class="badge creator">Creator</span>
+            {% endif %}
+            {% if post.author.is_moderator_of(post.topic) %}
+                <span class="badge mod">Mod</span>
+            {% endif %}
+            {% if post.author.is_super_admin %}
+                <span class="badge admin">Admin</span>
+            {% endif %}
+            {% if post.author.is_banned_from(post.topic) %}
+                <span class="badge banned">Banned</span>
+            {% endif %}
+        </div>
+        
+        {# ── Moderation Actions for Post Author ── #}
+        {% if current_user.is_authenticated and is_moderator is defined and is_moderator and current_user.id != post.author.id %}
+            <div class="mod-actions" style="display:inline-flex; gap:0.2rem; align-items:center; margin-left:0.5rem; margin-right:0.5rem;">
+                {% if current_user.id == post.topic.creator_id or current_user.is_super_admin %}
+                    {% if post.author.is_moderator_of(post.topic) %}
+                        <button class="btn btn-secondary btn-sm mod-action-btn" data-action="demote" data-user-id="{{ post.author.id }}" data-topic-id="{{ post.topic.id }}" style="padding:0.1rem 0.3rem; font-size:0.65rem;" onclick="event.stopPropagation(); event.preventDefault();">Demote</button>
+                    {% else %}
+                        <button class="btn btn-secondary btn-sm mod-action-btn" data-action="promote" data-user-id="{{ post.author.id }}" data-topic-id="{{ post.topic.id }}" style="padding:0.1rem 0.3rem; font-size:0.65rem;" onclick="event.stopPropagation(); event.preventDefault();">Promote</button>
+                    {% endif %}
+                {% endif %}
+
+                {% if not post.author.is_moderator_of(post.topic) and post.author.id != post.topic.creator_id %}
+                    {% if post.author.is_banned_from(post.topic) %}
+                        <button class="btn btn-danger btn-sm mod-action-btn" data-action="unban" data-user-id="{{ post.author.id }}" data-topic-id="{{ post.topic.id }}" style="padding:0.1rem 0.3rem; font-size:0.65rem;" onclick="event.stopPropagation(); event.preventDefault();">Unban</button>
+                    {% else %}
+                        <button class="btn btn-secondary btn-sm mod-action-btn" data-action="ban" data-user-id="{{ post.author.id }}" data-topic-id="{{ post.topic.id }}" style="padding:0.1rem 0.3rem; font-size:0.65rem;" onclick="event.stopPropagation(); event.preventDefault();">Ban</button>
+                    {% endif %}
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <span>•</span>
+        <span>{{ post.created_at.strftime('%b %d, %Y') }}</span>
+    </div>
+
+    {# ── Post Title (plain text, no link) ── #}
+    <h3 class="post-card-title">{{ post.title }}</h3>
+
+    {# ── Content Preview ── #}
+    {% if post.content %}
+        <div class="post-card-preview">
+            {{ post.content[:150] }}{% if post.content | length > 150 %}…{% endif %}
+        </div>
+    {% endif %}
+
+    {# ── Tags (moved above media, no link) ── #}
+    {% if post.tags %}
+        <div class="post-tags" style="margin-bottom: 12px; position: relative; z-index: 1;">
+            {% for tag in post.tags %}
+                <span class="tag-chip">{{ tag.name }}</span>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {# ── Media Preview (images/videos without A tags) ── #}
+    {% if post.media %}
+        {% if post.media | length == 1 %}
+            <div class="post-media-single" style="margin-top: 12px; position: relative; z-index: 1;">
+                {% if post.media[0].file_type == 'video' %}
+                    <video src="{{ url_for('static', filename=post.media[0].file_path) }}" 
+                           style="width: 100%; max-height: 400px; object-fit: cover; border-radius: 6px;" controls></video>
+                {% else %}
+                    <img src="{{ url_for('static', filename=post.media[0].file_path) }}" 
+                         alt="{{ post.media[0].alt_text }}"
+                         style="width: 100%; max-height: 400px; object-fit: cover; border-radius: 6px;">
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="post-media-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 12px; position: relative; z-index: 1;">
+                {% for m in post.media %}
+                    <div style="display: block; border-radius: 6px; overflow: hidden; background: var(--surface-2);">
+                        {% if m.file_type == 'video' %}
+                            <video src="{{ url_for('static', filename=m.file_path) }}" 
+                                   style="width: 100%; height: 120px; object-fit: cover; display: block;" controls></video>
+                        {% else %}
+                            <img src="{{ url_for('static', filename=m.file_path) }}" 
+                                 alt="{{ m.alt_text }}"
+                                 style="width: 100%; height: 120px; object-fit: cover; display: block;">
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endif %}
+
+    {# ── Card Footer: votes + comment count + mod controls ── #}
+    <div class="post-card-footer">
+        <div class="vote-group">
+            <button class="vote-btn post-vote-btn {% if post.user_vote == 1 %}liked{% endif %}"
+                    data-post-id="{{ post.id }}"
+                    data-value="1"
+                    title="Like">
+                👍 <span class="like-count">{{ post.like_count }}</span>
+            </button>
+            <span style="color:var(--surface-3);">|</span>
+            <button class="vote-btn post-vote-btn {% if post.user_vote == -1 %}disliked{% endif %}"
+                    data-post-id="{{ post.id }}"
+                    data-value="-1"
+                    title="Dislike">
+                👎 <span class="dislike-count">{{ post.dislike_count }}</span>
+            </button>
+        </div>
+
+        <span class="comment-count">
+            💬 {{ post.comment_count }}
+        </span>
+
+        {# ── Moderator + Owner controls ── #}
+        <div class="mod-actions">
+            {% if current_user.is_authenticated and is_moderator is defined and is_moderator %}
+                <button class="mod-btn pin"
+                        onclick="event.stopPropagation(); event.preventDefault(); togglePinPost($(this).data('post-id'), this);"
+                        data-post-id="{{ post.id }}" data-pin-action="true"
+                        title="{% if post.is_pinned %}Unpin{% else %}Pin{% endif %}">
+                    {% if post.is_pinned %}Unpin{% else %}Pin{% endif %}
+                </button>
+            {% endif %}
+
+            {% if can_edit %}
+                <button class="mod-btn edit"
+                        data-post-id="{{ post.id }}"
+                        data-post-title="{{ post.title | e }}"
+                        data-post-content="{{ post.content | e if post.content else '' }}"
+                        data-topic-name="{{ post.topic.name }}"
+                        data-media='[{% for m in post.media %}{"id": {{ m.id }}, "file_path": "{{ m.file_path }}", "type": "{{ m.file_type }}"}{% if not loop.last %},{% endif %}{% endfor %}]'
+                        data-tag-ids='[{% for t in post.tags %}{{ t.id }}{% if not loop.last %},{% endif %}{% endfor %}]'
+                        onclick="event.stopPropagation(); event.preventDefault(); openEditModal(this)"
+                        title="Edit post">
+                    Edit
+                </button>
+            {% endif %}
+
+            {% if can_delete %}
+                <button class="mod-btn delete"
+                        onclick="event.stopPropagation(); event.preventDefault(); confirmDeletePost($(this).data('post-id'), this);"
+                        data-post-id="{{ post.id }}" data-delete-action="true"
+                        title="Delete post">
+                    Delete
+                </button>
+            {% endif %}
+        </div>
+    </div>
+  </div>

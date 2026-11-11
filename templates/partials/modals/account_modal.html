@@ -1,0 +1,151 @@
+{# Template: account_modal.html #}
+{# Purpose: Renders the account_modal view #}
+{#
+partials/modals/account_modal.html – Account Settings Modal
+==============================================================
+Tabs for changing email, username, and password.
+#}
+
+<div id="account-modal" class="modal-overlay">
+    <div class="modal-box wide">
+
+        <div class="modal-header">
+            <h2>Account Settings</h2>
+            <button class="modal-close" onclick="closeModal('account-modal')" title="Close">✕</button>
+        </div>
+
+        <div class="modal-body" style="display:flex; gap:1.5rem; padding:0;">
+
+            {# ── Vertical Sidebar Tabs ── #}
+            <div class="settings-tabs"
+                style="width:160px; border-right:1px solid var(--border); padding:1.25rem 0 1.25rem 1.25rem;">
+                <button class="settings-tab-btn active" data-panel="email">✉️ Email</button>
+                <button class="settings-tab-btn" data-panel="username">👤 Username</button>
+                <button class="settings-tab-btn" data-panel="password">🔑 Password</button>
+                <button class="settings-tab-btn" data-panel="avatar">🖼️ Avatar</button>
+                <button class="settings-tab-btn" data-panel="danger" style="color:var(--danger); margin-top:1rem;">🗑️
+                    Delete Account</button>
+            </div>
+
+            {# ── Settings Panels ── #}
+            <div style="flex:1; padding:1.25rem 1.5rem 1.25rem 0;">
+
+                {# 1. Email Panel #}
+                <div id="settings-email" class="settings-panel active">
+                    <h3 style="margin-bottom:1rem;">Change Email</h3>
+                    <form action="{{ url_for('users.change_email') }}" method="POST">
+                        <div class="form-group">
+                            <label>Current Email</label>
+                            <input class="form-readonly" type="text" value="{{ current_user.email }}" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="new_email">New Email</label>
+                            <input class="form-input" type="email" id="new_email" name="new_email" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
+
+                {# 2. Username Panel #}
+                <div id="settings-username" class="settings-panel">
+                    <h3 style="margin-bottom:1rem;">Change Username</h3>
+                    <form action="{{ url_for('users.change_username') }}" method="POST">
+                        <div class="form-group">
+                            <label>Current Username</label>
+                            <input class="form-readonly" type="text" value="{{ current_user.username }}" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="new_username">New Username</label>
+                            <input class="form-input" type="text" id="new_username" name="new_username" required
+                                minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]+">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
+
+                {# 3. Password Panel #}
+                <div id="settings-password" class="settings-panel">
+                    <h3 style="margin-bottom:1rem;">Change Password</h3>
+                    <form action="{{ url_for('users.change_password') }}" method="POST">
+                        <div class="form-group">
+                            <label for="old_password">Current Password</label>
+                            <input class="form-input" type="password" id="old_password" name="old_password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="new_password">New Password</label>
+                            <input class="form-input" type="password" id="new_password" name="new_password" required
+                                minlength="6">
+                        </div>
+                        <div class="form-group">
+                            <label for="new_password2">Confirm New Password</label>
+                            <input class="form-input" type="password" id="new_password2" name="new_password2" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update Password</button>
+                    </form>
+                </div>
+
+                {# 4. Avatar Panel #}
+                <div id="settings-avatar" class="settings-panel">
+                    <h3 style="margin-bottom:1rem;">Change Profile Picture</h3>
+                    <form action="{{ url_for('users.change_avatar') }}" method="POST" enctype="multipart/form-data">
+                        <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
+                            {% if current_user.profile_pic %}
+                                <img src="{{ url_for('static', filename=current_user.profile_pic) }}" alt="Current Avatar"
+                                    style="width:64px; height:64px; border-radius:8px; object-fit:cover; border:2px solid var(--border);">
+                            {% else %}
+                                <img src="{{ url_for('static', filename='images/default_pfp.png') }}" alt="Current Avatar"
+                                    style="width:64px; height:64px; border-radius:8px; object-fit:cover; border:2px solid var(--border);">
+                            {% endif %}
+                            <div>
+                                <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
+                                    Upload Image
+                                    <input type="file" name="avatar" accept="image/*" style="display:none;" required
+                                        onchange="document.getElementById('avatar-file-name').textContent = this.files[0].name;">
+                                </label>
+                                <div id="avatar-file-name"
+                                    style="font-size:0.75rem; color:var(--text-dim); margin-top:0.3rem;"></div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Picture</button>
+                    </form>
+                    {% if current_user.profile_pic != 'default.png' %}
+                    <button id="remove-pic-btn" class="btn btn-secondary" style="margin-top:10px;">
+                        Remove Profile Picture
+                    </button>
+                    {% endif %}
+                </div>
+
+                {# 5. Delete Account Panel #}
+                <div id="settings-danger" class="settings-panel">
+                    <h3 style="margin-bottom:1rem; color:var(--danger);">🗑️ Delete Account</h3>
+                    <div id="delete-account-step1">
+                        <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:1.25rem;">
+                            Are you sure you want to <strong style="color:var(--danger);">permanently delete</strong>
+                            your account? This cannot be undone. All your posts, comments, and data will be removed.
+                        </p>
+                        <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+                            <button class="btn btn-secondary" onclick="closeModal('account-modal')">Cancel</button>
+                            <button class="btn btn-danger"
+                                onclick="document.getElementById('delete-account-step1').style.display='none'; document.getElementById('delete-account-step2').style.display='block';">I
+                                understand, continue</button>
+                        </div>
+                    </div>
+                    <div id="delete-account-step2" style="display:none;">
+                        <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:0.75rem;">
+                            Type <strong style="color:var(--danger);">DELETE</strong> to confirm:
+                        </p>
+                        <input type="text" id="delete-account-confirm-input" class="form-input"
+                            placeholder="Type DELETE here" style="margin-bottom:1rem;">
+                        <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+                            <button class="btn btn-secondary" onclick="closeModal('account-modal')">Cancel</button>
+                            <button class="btn btn-danger" id="delete-account-forever-btn"
+                                onclick="confirmDeleteAccount()">Delete Forever</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>

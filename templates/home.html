@@ -1,0 +1,206 @@
+{# Template: home.html #}
+{# Purpose: Renders the home view #}
+{#
+   home.html – Home Page
+   =======================
+   Chapter 17: Jinja2 template inheritance, {% if %}, {% for %}
+   Extends base.html and fills in all three sidebar/content blocks.
+#}
+{% extends 'base.html' %}
+
+{# ── SEO ── #}
+{% block title %}Home{% endblock %}
+{% block meta_desc %}Browse the latest posts on dotTopic – your community forum.{% endblock %}
+
+
+{# ════════════════════════════════════════════════════════════
+   LEFT SIDEBAR – Account management (only for logged-in users)
+   ════════════════════════════════════════════════════════════ #}
+{% block sidebar_left %}
+
+    {% if current_user.is_authenticated %}
+
+
+
+        {# ── Create a topic ── #}
+        <div class="sidebar-card">
+            <h3>Explore</h3>
+            <a href="{{ url_for('topics.create_topic') }}" class="sidebar-create-btn">
+                ➕ Create a Topic
+            </a>
+        </div>
+
+    {% else %}
+        {# Logged-out: prompt to join #}
+        <div class="sidebar-card">
+            <h3>Welcome!</h3>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.75rem;">
+                Join dotTopic to post, comment, and follow topics.
+            </p>
+            <button class="btn btn-primary btn-full"
+                    onclick="openModal('auth-modal'); switchTab('register');">
+                Get Started
+            </button>
+        </div>
+    {% endif %}
+
+{% endblock %}
+
+
+{# ════════════════════════════════════════════════════════════
+   MAIN CONTENT – Post feed
+   ════════════════════════════════════════════════════════════ #}
+{% block content %}
+
+    {# ── Feed Toggle (only visible when logged in) ── #}
+    {% if current_user.is_authenticated %}
+        <div class="feed-toggle-bar">
+            <span style="font-size:0.82rem; color:var(--text-muted);">Showing:</span>
+
+            <button
+                class="feed-toggle-btn {% if feed_type == 'subscribed' %}active{% endif %}"
+                data-feed="subscribed"
+            >
+                📰 Subscribed
+            </button>
+
+            <button
+                class="feed-toggle-btn {% if feed_type == 'random' %}active{% endif %}"
+                data-feed="random"
+            >
+                🎲 Random
+            </button>
+        </div>
+    {% endif %}
+
+    {# ── Section heading ── #}
+    <div class="section-title">
+        {% if feed_type == 'subscribed' %}
+            📰 Your Feed
+        {% else %}
+            🔥 Popular Posts
+        {% endif %}
+    </div>
+
+    {# ── Post cards grid ── #}
+    {% if posts %}
+        <div class="post-grid">
+            {% for post in posts %}
+                {# Include the reusable post card partial #}
+                {% include 'partials/post_card.html' %}
+            {% endfor %}
+        </div>
+
+    {% else %}
+        {# ── Empty state ── #}
+        <div class="empty-state">
+            <span class="empty-icon">📭</span>
+            {% if feed_type == 'subscribed' %}
+                <p>You haven't subscribed to any topics yet.</p>
+                <p style="font-size:0.85rem; margin-top:0.5rem;">
+                    Explore topics and hit Subscribe to see posts here.
+                </p>
+            {% else %}
+                <p>No posts yet. Be the first to create one!</p>
+            {% endif %}
+        </div>
+    {% endif %}
+
+{% endblock %}
+
+
+{# ════════════════════════════════════════════════════════════
+   RIGHT SIDEBAR – My Topics
+   ════════════════════════════════════════════════════════════ #}
+{% block sidebar_right %}
+
+    {% if current_user.is_authenticated %}
+        {% if created_topics %}
+        <div class="sidebar-card">
+            <h3>Topics You Created</h3>
+            <ul>
+                {% for topic in created_topics %}
+                    <li>
+                        <a class="sidebar-topic-item" href="{{ url_for('topics.topic_page', topic_name=topic.name) }}">
+                            {% if topic.photo %}
+                                <img class="sidebar-topic-icon" src="{{ url_for('static', filename=topic.photo) }}" alt="{{ topic.name }}">
+                            {% else %}
+                                <span class="sidebar-topic-icon topic-photo-fallback" style="font-size:0.85rem; width:24px; height:24px;">
+                                    {{ topic.name[0].upper() }}
+                                </span>
+                            {% endif %}
+                            <span class="topic-name-text">{{ topic.name }}</span>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if moderated_topics %}
+        <div class="sidebar-card">
+            <h3>Topics You Mod</h3>
+            <ul>
+                {% for topic in moderated_topics %}
+                    <li>
+                        <a class="sidebar-topic-item" href="{{ url_for('topics.topic_page', topic_name=topic.name) }}">
+                            {% if topic.photo %}
+                                <img class="sidebar-topic-icon" src="{{ url_for('static', filename=topic.photo) }}" alt="{{ topic.name }}">
+                            {% else %}
+                                <span class="sidebar-topic-icon topic-photo-fallback" style="font-size:0.85rem; width:24px; height:24px;">
+                                    {{ topic.name[0].upper() }}
+                                </span>
+                            {% endif %}
+                            <span class="topic-name-text">{{ topic.name }}</span>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div class="sidebar-card">
+            <h3>Subscribed Topics</h3>
+
+            {% if subscribed_topics %}
+                <ul>
+                    {% for topic in subscribed_topics %}
+                        <li>
+                            <a class="sidebar-topic-item"
+                               href="{{ url_for('topics.topic_page', topic_name=topic.name) }}">
+
+                                {# Topic icon (circle) #}
+                                {% if topic.photo %}
+                                    <img class="sidebar-topic-icon"
+                                         src="{{ url_for('static', filename=topic.photo) }}"
+                                         alt="{{ topic.name }}">
+                                {% else %}
+                                    {# Colored initial as fallback #}
+                                    <span class="sidebar-topic-icon topic-photo-fallback" style="font-size:0.85rem; width:24px; height:24px;">
+                                        {{ topic.name[0].upper() }}
+                                    </span>
+                                {% endif %}
+
+                                <span class="topic-name-text">{{ topic.name }}</span>
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="sidebar-empty">You haven't joined any topics yet.</p>
+            {% endif %}
+
+            {# ── Discover button ── #}
+            <a href="{{ url_for('main.search') }}" class="sidebar-create-btn" style="margin-top:0.75rem;">
+                🔍 Discover Topics
+            </a>
+        </div>
+
+    {% else %}
+        <div class="sidebar-card">
+            <h3>Popular Topics</h3>
+            <p class="sidebar-empty">Log in to see your topics.</p>
+        </div>
+    {% endif %}
+
+{% endblock %}

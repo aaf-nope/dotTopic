@@ -1,0 +1,239 @@
+{# Template: base.html #}
+{# Purpose: Renders the base view #}
+{#
+base.html – dotTopic Base Template
+=====================================
+Chapter 17: Jinja2 template inheritance.
+All other pages extend this template and fill in the {% block %} sections.
+
+Blocks available:
+{% block title %} – Page title (in
+
+<head>)
+    {% block meta_desc %} – Meta description for SEO
+    {% block sidebar_left %} – Left sidebar content
+    {% block content %} – Main content area
+    {% block sidebar_right %}– Right sidebar content
+    {% block extra_scripts %}– Extra JS for specific pages
+    #}
+    <!DOCTYPE html>
+    <html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        {# ── SEO: Title tag (Chapter 16 – HTML document structure) ── #}
+        <title>{% block title %}dotTopic{% endblock %} – dotTopic</title>
+
+        {# ── SEO: Meta description ── #}
+        <meta name="description"
+            content="{% block meta_desc %}dotTopic – A community-driven forum for everything.{% endblock %}">
+
+        {# ── Google Fonts: Inter (modern, clean typeface) ── #}
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+            rel="stylesheet">
+
+        {# ── External CSS stylesheets (Chapter 2) ── #}
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/modals.css') }}">
+
+        {# ── jQuery from CDN (Chapter 15) ── #}
+        {# We load jQuery in the
+
+        <head> so modal-handler.js (loaded at bottom) can use it #}
+            <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+        </head>
+
+    <body>
+
+        {# ════════════════════════════════════════════════════════════
+        HEADER (Chapter 5 – Flexbox layout)
+        ════════════════════════════════════════════════════════════ #}
+        <header class="header">
+            <div class="header-row header-main">
+                <a href="{{ url_for('main.home') }}" class="header-logo">
+                    <span class="logo-text"><span class="logo-dot">dot</span>Topic</span>
+                </a>
+                <div class="header-actions">
+                    <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle dark mode"
+                        title="Toggle theme">🌙</button>
+
+                    {% if current_user.is_authenticated %}
+                    <div id="profile-menu">
+                        <button id="profile-toggle" type="button">
+                            <img src="{{ url_for('static', filename=current_user.profile_pic or 'default_pfp.png') }}" class="user-avatar" alt="{{ current_user.username }}'s avatar">
+                            <span class="desktop-only">{{ current_user.username }}</span>
+                            <span class="desktop-only">▾</span>
+                        </button>
+                        <div id="profile-dropdown">
+                            <a href="{{ url_for('users.user_profile', username=current_user.username) }}">👤 My
+                                Profile</a>
+                            <button type="button" onclick="openModal('account-modal')">⚙️ Account Settings</button>
+                            <div class="dropdown-divider"></div>
+                            <a href="{{ url_for('auth.logout') }}">🚪 Log Out</a>
+                        </div>
+                    </div>
+                    {% else %}
+                    <button class="btn btn-secondary btn-sm"
+                        onclick="openModal('auth-modal'); setTimeout(() => switchTab('login'), 10);">Log In</button>
+                    <button class="btn btn-primary btn-sm"
+                        onclick="openModal('auth-modal'); setTimeout(() => switchTab('register'), 10);">Register</button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="header-row header-search">
+                <form class="search-form" action="{{ url_for('main.search') }}" method="GET">
+                    <input type="text" name="q" placeholder="Search dotTopic..." class="search-input"
+                        value="{{ request.args.get('q', '') }}" autocomplete="off">
+                    <button type="submit" class="btn btn-primary btn-sm">Search</button>
+                </form>
+            </div>
+        </header>
+
+
+        {# ════════════════════════════════════════════════════════════
+        FLASH MESSAGES (Chapter 17 – Flask flash())
+        ════════════════════════════════════════════════════════════ #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-container">
+            {% for category, message in messages %}
+            <div class="flash-message flash-{{ category }}">
+                <span>{{ message }}</span>
+                <button class="close-flash" type="button">✕</button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+
+        {# ════════════════════════════════════════════════════════════
+        THREE-COLUMN LAYOUT (Chapter 5 – Flexbox)
+        Left Sidebar | Main Content | Right Sidebar
+        ════════════════════════════════════════════════════════════ #}
+        <div id="page-wrapper">
+
+            {# ── Left Sidebar ── #}
+            <aside id="sidebar-left">
+                {% block sidebar_left %}{% endblock %}
+            </aside>
+
+            {# ── Main Content Area ── #}
+            <main id="content-main" role="main">
+                {% block content %}{% endblock %}
+            </main>
+
+            {# ── Right Sidebar ── #}
+            <aside id="sidebar-right">
+                {% block sidebar_right %}{% endblock %}
+            </aside>
+
+        </div>
+
+
+        {# ════════════════════════════════════════════════════════════
+        FOOTER
+        ════════════════════════════════════════════════════════════ #}
+        <footer id="site-footer">
+            <p>
+                <span>Ali Fadlallah &amp; Hadi Ismail</span> &nbsp;|&nbsp;
+                CSCI315 – Web Application Development 2026
+            </p>
+        </footer>
+
+
+        {# ════════════════════════════════════════════════════════════
+        MODALS (included as partials, Chapter 17 – Jinja2 include)
+        ════════════════════════════════════════════════════════════ #}
+
+        {# Login + Register (inside one modal with tabs) #}
+        {% include 'partials/modals/login_modal.html' %}
+
+        {# Create / Edit Post modal #}
+        {% include 'partials/modals/post_modal.html' %}
+
+        {# Account Settings modal (shown to logged-in users) #}
+        {% if current_user.is_authenticated %}
+        {% include 'partials/modals/account_modal.html' %}
+        {% endif %}
+
+        {# Generic confirm/delete modal #}
+        {% include 'partials/modals/confirm_modal.html' %}
+
+        {# Generic alert modal #}
+        {% include 'partials/modals/alert_modal.html' %}
+
+        {# ── Moderation Reason Modal ── #}
+        <div id="mod-reason-modal" class="modal-overlay" onclick="closeModalOnOutsideClick(event, 'mod-reason-modal')">
+            <div class="modal-box" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">Ban User</h2>
+                    <button class="modal-close" onclick="closeModal('mod-reason-modal')">✕</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="mod-reason-action">
+                    <input type="hidden" id="mod-reason-user-id">
+                    <input type="hidden" id="mod-reason-topic-id">
+                    <div class="form-group">
+                        <label class="form-label">Reason (Optional)</label>
+                        <input type="text" id="mod-reason-input" class="form-input" placeholder="e.g., Spamming">
+                    </div>
+                    <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1.5rem;">
+                        <button class="btn btn-secondary" onclick="closeModal('mod-reason-modal')">Cancel</button>
+                        <button id="submit-mod-reason" class="btn btn-danger">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ── Edit Comment Modal ── #}
+        <div id="edit-comment-modal" class="modal-overlay"
+            onclick="closeModalOnOutsideClick(event, 'edit-comment-modal')">
+            <div class="modal-box" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">Edit Comment</h2>
+                    <button class="modal-close" onclick="closeModal('edit-comment-modal')">✕</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit-comment-id">
+                    <div class="form-group">
+                        <textarea id="edit-comment-textarea" class="form-input" rows="4"></textarea>
+                    </div>
+                    <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1.5rem;">
+                        <button class="btn btn-secondary" onclick="closeModal('edit-comment-modal')">Cancel</button>
+                        <button id="submit-edit-comment" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        {# ════════════════════════════════════════════════════════════
+        JAVASCRIPT FILES (external, loaded at end of body)
+        Chapter 15: jQuery loaded in
+
+        <head>; app JS loaded here
+            ════════════════════════════════════════════════════════════ #}
+            <script src="{{ url_for('static', filename='js/modal-handler.js') }}"></script>
+            <script src="{{ url_for('static', filename='js/like-system.js') }}"></script>
+            <script src="{{ url_for('static', filename='js/subscribe.js') }}"></script>
+            <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+            {# ── Inline helper: switchTab (used by header buttons) ── #}
+            <script>
+                // Helper to programmatically switch auth tabs (login / register)
+                function switchTab(tabName) {
+                    $('[data-panel="' + tabName + '"]').click();
+                }
+            </script>
+
+            {# ── Page-specific scripts ── #}
+            {% block extra_scripts %}{% endblock %}
+
+    </body>
+
+    </html>

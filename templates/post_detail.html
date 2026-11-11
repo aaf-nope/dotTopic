@@ -1,0 +1,256 @@
+{# post_detail.html – Post Detail Page #}
+{% extends 'base.html' %}
+
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block sidebar_left %}
+<div class="sidebar-card">
+    <h3>About .{{ topic.name }}</h3>
+    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.65rem;">
+        {{ topic.description or 'No description.' }}
+    </p>
+    <a href="{{ url_for('topics.topic_page', topic_name=topic.name) }}" class="btn btn-secondary btn-sm btn-full"
+        style="text-align:center;">
+        ← Back to .{{ topic.name }}
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<article class="post-full{% if post.is_pinned %} pinned{% endif %}">
+    {% if post.is_pinned %}
+    <span class="pin-badge">📌 Pinned Post</span>
+    {% endif %}
+
+    <h1>{{ post.title }}</h1>
+
+    <div class="post-meta">
+        <img src="{{ url_for('static', filename=post.author.profile_pic or 'default_pfp.png') }}" alt="{{ post.author.username }}"
+            style="width:22px; height:22px; border-radius:8px; object-fit:cover;">
+
+        <span>Posted by
+            <div class="user-badges" data-user-id="{{ post.author.id }}"
+                style="display:inline-flex; align-items:center; gap:4px;">
+                <a href="{{ url_for('users.user_profile', username=post.author.username) }}"
+                    style="color:var(--primary-light); font-weight:600;">
+                    {{ post.author.username }}
+                </a>
+                {% if post.author.id == topic.creator_id %}
+                <span class="badge creator">Creator</span>
+                {% endif %}
+                {% if post.author.is_moderator_of(topic) %}
+                <span class="badge mod">Mod</span>
+                {% endif %}
+                {% if post.author.is_super_admin %}
+                <span class="badge admin">Admin</span>
+                {% endif %}
+                {% if post.author.is_banned_from(topic) %}
+                <span class="badge banned">Banned</span>
+                {% endif %}
+            </div>
+        </span>
+
+        {% if current_user.is_authenticated and is_moderator and current_user.id != post.author.id %}
+        <div class="mod-actions" style="display:inline-flex; gap:0.2rem; margin-left:0.5rem;">
+            {% if current_user.id == topic.creator_id or current_user.is_super_admin %}
+            {% if post.author.is_moderator_of(topic) %}
+            <button class="btn btn-secondary btn-sm mod-action-btn" data-action="demote"
+                data-user-id="{{ post.author.id }}" data-topic-id="{{ topic.id }}">Demote</button>
+            {% else %}
+            <button class="btn btn-secondary btn-sm mod-action-btn" data-action="promote"
+                data-user-id="{{ post.author.id }}" data-topic-id="{{ topic.id }}">Promote</button>
+            {% endif %}
+            {% endif %}
+
+            {% if not post.author.is_moderator_of(topic) and post.author.id != topic.creator_id %}
+            {% if post.author.is_banned_from(topic) %}
+            <button class="btn btn-danger btn-sm mod-action-btn" data-action="unban" data-user-id="{{ post.author.id }}"
+                data-topic-id="{{ topic.id }}">Unban</button>
+            {% else %}
+            <button class="btn btn-secondary btn-sm mod-action-btn" data-action="ban"
+                data-user-id="{{ post.author.id }}" data-topic-id="{{ topic.id }}">Ban</button>
+            {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <span>•</span>
+        <span>{{ post.created_at.strftime('%b %d, %Y') }}</span>
+        <span>•</span>
+        <a href="{{ url_for('topics.topic_page', topic_name=topic.name) }}" class="topic-chip">.{{ topic.name }}</a>
+        {% if post.updated_at %}
+        <span>• <em style="color:var(--text-dim); font-size:0.78rem;">edited</em></span>
+        {% endif %}
+    </div>
+
+    {% if post.tags %}
+    <div class="post-tags" style="margin-bottom:1rem;">
+        {% for tag in post.tags %}
+        <span class="tag-chip">{{ tag.name }}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if post.content %}
+    <div class="post-body">{{ post.content }}</div>
+    {% endif %}
+
+    {% if post.media %}
+    {% if post.media|length == 1 %}
+    <div class="post-media-single" style="margin-top: 1rem;">
+        <a href="{{ url_for('static', filename=post.media[0].file_path) }}" target="_blank">
+            {% if post.media[0].file_type == 'video' %}
+            <video src="{{ url_for('static', filename=post.media[0].file_path) }}"
+                style="width:100%; max-height:400px; object-fit:contain; border-radius:8px; background:var(--surface-2);"
+                controls></video>
+            {% else %}
+            <img src="{{ url_for('static', filename=post.media[0].file_path) }}" alt="{{ post.media[0].alt_text }}"
+                style="width:100%; max-height:400px; object-fit:contain; border-radius:8px; background:var(--surface-2);">
+            {% endif %}
+        </a>
+    </div>
+    {% else %}
+    <div class="post-media-grid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:1rem;">
+        {% for m in post.media %}
+        <a href="{{ url_for('static', filename=m.file_path) }}" target="_blank"
+            style="display:block; border-radius:8px; overflow:hidden; background:var(--surface-2);">
+            {% if m.file_type == 'video' %}
+            <video src="{{ url_for('static', filename=m.file_path) }}"
+                style="width:100%; height:200px; object-fit:cover;" controls></video>
+            {% else %}
+            <img src="{{ url_for('static', filename=m.file_path) }}" alt="{{ m.alt_text }}"
+                style="width:100%; height:200px; object-fit:cover;">
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <div class="post-vote-row">
+        <div class="vote-group">
+            <button class="vote-btn post-vote-btn {% if user_like_val == 1 %}liked{% endif %}"
+                data-post-id="{{ post.id }}" data-value="1">
+                👍 <span class="like-count">{{ post.like_count }}</span>
+            </button>
+            <span style="color:var(--border);">|</span>
+            <button class="vote-btn post-vote-btn {% if user_like_val == -1 %}disliked{% endif %}"
+                data-post-id="{{ post.id }}" data-value="-1">
+                👎 <span class="dislike-count">{{ post.dislike_count }}</span>
+            </button>
+        </div>
+
+        {% if current_user.is_authenticated and is_moderator %}
+        <button class="mod-btn pin" id="pin-post-btn" data-post-id="{{ post.id }}">
+            {% if post.is_pinned %}Unpin{% else %}Pin{% endif %}
+        </button>
+        {% endif %}
+
+        {% if current_user.is_authenticated and not is_banned and current_user.id == post.user_id %}
+        <button class="mod-btn edit" data-post-id="{{ post.id }}" data-post-title="{{ post.title|e }}"
+            data-post-content="{{ post.content|e }}" data-topic-name="{{ topic.name }}"
+            data-media='[{% for m in post.media %}{"id": {{ m.id }}, "file_path": "{{ m.file_path }}", "type": "{{ m.file_type }}"}{% if not loop.last %},{% endif %}{% endfor %}]'
+            data-tag-ids='[{% for t in post.tags %}{{ t.id }}{% if not loop.last %},{% endif %}{% endfor %}]'
+            onclick="openEditModal(this)">
+            Edit
+        </button>
+        {% endif %}
+
+        {# ── Delete button opens a <dialog> modal ── #}
+            {% if current_user.is_authenticated and not is_banned and (current_user.id == post.user_id or is_moderator)
+            %}
+            <button id="showDeleteDialogBtn" class="btn btn-danger btn-sm">Delete</button>
+
+            <dialog id="deleteDialog">
+                <div style="padding: 1rem;">
+                    <h3>Delete Post</h3>
+                    <p>Are you sure you want to delete this post? This cannot be undone.</p>
+                    <form method="POST"
+                        action="{{ url_for('topics.delete_post_page', topic_name=topic.name, post_id=post.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+                        <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1rem;">
+                            <button type="button" id="cancelDeleteDialog" class="btn btn-secondary">Cancel</button>
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </div>
+                    </form>
+                </div>
+            </dialog>
+            {% endif %}
+    </div>
+</article>
+
+{# ── Comments section (unchanged) ── #}
+<section class="comments-section">
+    <div class="comments-header">
+        <h3>💬 {{ top_comments|length }} Comment{{ 's' if top_comments|length != 1 else '' }}</h3>
+        <div class="sort-bar">
+            <a class="sort-btn {% if sort_option == 'newest' %}active{% endif %}"
+                href="{{ url_for('topics.post_detail', topic_name=topic.name, post_id=post.id, sort='newest') }}">Newest</a>
+            <a class="sort-btn {% if sort_option == 'oldest' %}active{% endif %}"
+                href="{{ url_for('topics.post_detail', topic_name=topic.name, post_id=post.id, sort='oldest') }}">Oldest</a>
+            <a class="sort-btn {% if sort_option == 'top' %}active{% endif %}"
+                href="{{ url_for('topics.post_detail', topic_name=topic.name, post_id=post.id, sort='top') }}">Top</a>
+        </div>
+    </div>
+
+    {% if current_user.is_authenticated %}
+    {% if is_banned %}
+    <div class="flash-message flash-danger">🚫 You are banned from this topic and cannot comment.</div>
+    {% else %}
+    <div class="comment-form">
+        <label>Writing as <strong style="color:var(--primary-light);">{{ current_user.username }}</strong></label>
+        <textarea id="comment-textarea" placeholder="What are your thoughts?" rows="3"></textarea>
+        <button id="comment-submit-btn" class="btn btn-primary btn-sm" data-post-id="{{ post.id }}">Comment</button>
+    </div>
+    {% endif %}
+    {% else %}
+    <div
+        style="text-align:center; padding:1rem; background:var(--surface-2); border-radius:var(--radius-sm); margin-bottom:1rem;">
+        <p>Log in to join the discussion.</p>
+        <button class="btn btn-primary btn-sm" onclick="openModal('auth-modal');">Log In / Register</button>
+    </div>
+    {% endif %}
+
+    <div id="comments-list">
+        {% if top_comments %}
+        {% for comment in top_comments %}
+        {% include 'partials/comment_thread.html' %}
+        {% endfor %}
+        {% else %}
+        <div class="empty-state"><span>💭</span>
+            <p>No comments yet. Start the conversation!</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{# ── Vanilla JS for the delete dialog ── #}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const showBtn = document.getElementById('showDeleteDialogBtn');
+        const dialog = document.getElementById('deleteDialog');
+        const cancelBtn = document.getElementById('cancelDeleteDialog');
+
+        if (showBtn && dialog) {
+            showBtn.addEventListener('click', function () {
+                dialog.showModal();
+            });
+        }
+
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function () {
+                dialog.close();
+            });
+        }
+
+        // Close when clicking on the backdrop
+        dialog.addEventListener('click', function (e) {
+            if (e.target === dialog) {
+                dialog.close();
+            }
+        });
+    });
+</script>
+{% endblock %}
+
+{% block sidebar_right %}{% endblock %}

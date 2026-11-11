@@ -1,0 +1,246 @@
+{# Template: comment_thread.html #}
+{# Purpose: Renders the comment_thread view #}
+{#
+partials/comment_thread.html – Single Comment (with replies)
+===============================================================
+Chapter 17: Jinja2 partial ({% include %}).
+Renders one comment and up to 2 levels of replies.
+
+Variables expected:
+- comment : a Comment model object
+- is_moderator : boolean (from post_detail.html)
+- post : the Post object (for the reply API data attribute)
+#}
+
+<div class="comment-item" id="comment-{{ comment.id }}">
+    <div class="comment-bubble {% if comment.is_pinned %}pinned-comment{% endif %}">
+
+        {# ── Pinned indicator ── #}
+        {% if comment.is_pinned %}
+        <span style="font-size:0.72rem; color:var(--accent); font-weight:700;
+                         display:block; margin-bottom:0.35rem;">
+            📌 Pinned Comment
+        </span>
+        {% endif %}
+
+        {# ── Author row ── #}
+        <div class="comment-author">
+            {% if comment.author.profile_pic %}
+                <img class="comment-avatar" src="{{ url_for('static', filename=comment.author.profile_pic) }}" alt="{{ comment.author.username }}">
+            {% else %}
+                <img class="comment-avatar" src="{{ url_for('static', filename='images/default_pfp.png') }}" alt="{{ comment.author.username }}">
+            {% endif %}
+            <div class="user-badges" data-user-id="{{ comment.author.id }}"
+                style="display:inline-flex; align-items:center; gap:4px;">
+                <a class="comment-username"
+                    href="{{ url_for('users.user_profile', username=comment.author.username) }}">
+                    {{ comment.author.username }}
+                </a>
+                {% if comment.author.id == post.topic.creator_id %}
+                <span class="badge creator">Creator</span>
+                {% endif %}
+                {% if comment.author.is_moderator_of(post.topic) %}
+                <span class="badge mod">Mod</span>
+                {% endif %}
+                {% if comment.author.is_super_admin %}
+                <span class="badge admin">Admin</span>
+                {% endif %}
+                {% if comment.author.is_banned_from(post.topic) %}
+                <span class="badge banned">Banned</span>
+                {% endif %}
+
+            </div>
+            <span class="comment-date">
+                {{ comment.created_at.strftime('%b %d, %Y') }}
+            </span>
+        </div>
+
+        {# ── Comment body text ── #}
+        <div class="comment-body" id="comment-content-{{ comment.id }}">{{ comment.content }}</div>
+
+        {# ── Action buttons row ── #}
+        <div class="comment-actions">
+
+            {# Like button #}
+            <button class="comment-action-btn comment-vote-btn" data-comment-id="{{ comment.id }}" data-value="1">
+                👍 <span class="comment-like-count">{{ comment.like_count }}</span>
+            </button>
+
+            {# Dislike button #}
+            <button class="comment-action-btn comment-vote-btn" data-comment-id="{{ comment.id }}" data-value="-1">
+                👎 <span class="comment-dislike-count">{{ comment.dislike_count }}</span>
+            </button>
+
+            {# Reply button (only on top-level comments, not on replies) #}
+            {% if comment.parent_id is none and current_user.is_authenticated and not is_banned %}
+            <button class="comment-action-btn reply-toggle-btn">
+                ↩ Reply
+            </button>
+            {% endif %}
+
+            {# Pin/Unpin (moderators only) #}
+            {% if current_user.is_authenticated and is_moderator %}
+            <button class="comment-action-btn pin-comment-btn" data-comment-id="{{ comment.id }}"
+                title="{% if comment.is_pinned %}Unpin{% else %}Pin{% endif %}">
+                {% if comment.is_pinned %}📌 Unpin{% else %}📌 Pin{% endif %}
+            </button>
+            {% endif %}
+
+            {# Delete and Edit (own comment, or moderator) #}
+            {% if current_user.is_authenticated and not is_banned and
+            (current_user.id == comment.user_id or is_moderator) %}
+            {% if current_user.id == comment.user_id %}
+            <button class="comment-action-btn edit-comment-btn" style="color:var(--primary-light);"
+                data-comment-id="{{ comment.id }}">
+                ✏️ Edit
+            </button>
+            {% endif %}
+            <button class="comment-action-btn delete-comment-btn" style="color:var(--danger);"
+                data-comment-id="{{ comment.id }}">
+                🗑 Delete
+            </button>
+            {% endif %}
+
+            {# Moderator Action Buttons (Promote/Ban/Mute) #}
+            {% if current_user.is_authenticated and is_moderator and current_user.id != comment.user_id %}
+            <span style="color:var(--border);">|</span>
+            {% if current_user.id == post.topic.creator_id or current_user.is_super_admin %}
+            {% if comment.author.is_moderator_of(post.topic) %}
+            <button class="comment-action-btn mod-action-btn" data-action="demote" data-user-id="{{ comment.user_id }}"
+                data-topic-id="{{ post.topic_id }}">Demote</button>
+            {% else %}
+            <button class="comment-action-btn mod-action-btn" data-action="promote" data-user-id="{{ comment.user_id }}"
+                data-topic-id="{{ post.topic_id }}">Promote</button>
+            {% endif %}
+            {% endif %}
+
+            {% if not comment.author.is_moderator_of(post.topic) and comment.author.id != post.topic.creator_id %}
+            {% if comment.author.is_banned_from(post.topic) %}
+            <button class="comment-action-btn mod-action-btn" style="color:var(--danger);" data-action="unban"
+                data-user-id="{{ comment.user_id }}" data-topic-id="{{ post.topic_id }}">Unban</button>
+            {% else %}
+            <button class="comment-action-btn mod-action-btn" data-action="ban" data-user-id="{{ comment.user_id }}"
+                data-topic-id="{{ post.topic_id }}">Ban</button>
+            {% endif %}
+
+            {% endif %}
+            {% endif %}
+
+        </div>
+
+        {# ── Inline Reply Form (hidden by default, shown via JS) ── #}
+        {% if comment.parent_id is none and current_user.is_authenticated and not is_banned %}
+        <div class="reply-form">
+            <textarea placeholder="Write a reply..." rows="2"></textarea>
+            <div class="reply-form-actions">
+                <button class="btn btn-primary btn-sm reply-submit-btn" data-comment-id="{{ comment.id }}"
+                    data-post-id="{{ post.id }}">
+                    Reply
+                </button>
+                <button class="btn btn-secondary btn-sm reply-cancel-btn">Cancel</button>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>{# end .comment-bubble #}
+
+    {# ── Replies (depth 2) ── #}
+    {% if comment.replies %}
+    <div class="replies-container">
+        {% for reply in comment.replies | sort(attribute='created_at') %}
+        {#
+        Replies are rendered inline (not re-included recursively)
+        to enforce the max depth of 2.
+        #}
+        <div class="comment-item" id="comment-{{ reply.id }}">
+            <div class="comment-bubble">
+
+                <div class="comment-author">
+                    {% if reply.author.profile_pic %}
+                        <img class="comment-avatar" src="{{ url_for('static', filename=reply.author.profile_pic) }}" alt="{{ reply.author.username }}">
+                    {% else %}
+                        <img class="comment-avatar" src="{{ url_for('static', filename='images/default_pfp.png') }}" alt="{{ reply.author.username }}">
+                    {% endif %}
+                    <div class="user-badges" data-user-id="{{ reply.author.id }}"
+                        style="display:inline-flex; align-items:center; gap:4px;">
+                        <a class="comment-username"
+                            href="{{ url_for('users.user_profile', username=reply.author.username) }}">
+                            {{ reply.author.username }}
+                        </a>
+                        {% if reply.author.id == post.topic.creator_id %}
+                        <span class="badge creator">Creator</span>
+                        {% endif %}
+                        {% if reply.author.is_moderator_of(post.topic) %}
+                        <span class="badge mod">Mod</span>
+                        {% endif %}
+                        {% if reply.author.is_super_admin %}
+                        <span class="badge admin">Admin</span>
+                        {% endif %}
+                        {% if reply.author.is_banned_from(post.topic) %}
+                        <span class="badge banned">Banned</span>
+                        {% endif %}
+
+                    </div>
+                    <span class="comment-date">
+                        {{ reply.created_at.strftime('%b %d, %Y') }}
+                    </span>
+                </div>
+
+                <div class="comment-body" id="comment-content-{{ reply.id }}">{{ reply.content }}</div>
+
+                <div class="comment-actions">
+                    <button class="comment-action-btn comment-vote-btn" data-comment-id="{{ reply.id }}" data-value="1">
+                        👍 <span class="comment-like-count">{{ reply.like_count }}</span>
+                    </button>
+                    <button class="comment-action-btn comment-vote-btn" data-comment-id="{{ reply.id }}"
+                        data-value="-1">
+                        👎 <span class="comment-dislike-count">{{ reply.dislike_count }}</span>
+                    </button>
+
+                    {% if current_user.is_authenticated and not is_banned and
+                    (current_user.id == reply.user_id or is_moderator) %}
+                    {% if current_user.id == reply.user_id %}
+                    <button class="comment-action-btn edit-comment-btn" style="color:var(--primary-light);"
+                        data-comment-id="{{ reply.id }}">
+                        ✏️ Edit
+                    </button>
+                    {% endif %}
+                    <button class="comment-action-btn delete-comment-btn" style="color:var(--danger);"
+                        data-comment-id="{{ reply.id }}">
+                        🗑 Delete
+                    </button>
+                    {% endif %}
+
+                    {# Moderator Action Buttons (Promote/Ban/Mute) #}
+                    {% if current_user.is_authenticated and is_moderator and current_user.id != reply.user_id %}
+                    <span style="color:var(--border);">|</span>
+                    {% if current_user.id == post.topic.creator_id or current_user.is_super_admin %}
+                    {% if reply.author.is_moderator_of(post.topic) %}
+                    <button class="comment-action-btn mod-action-btn" data-action="demote"
+                        data-user-id="{{ reply.user_id }}" data-topic-id="{{ post.topic_id }}">Demote</button>
+                    {% else %}
+                    <button class="comment-action-btn mod-action-btn" data-action="promote"
+                        data-user-id="{{ reply.user_id }}" data-topic-id="{{ post.topic_id }}">Promote</button>
+                    {% endif %}
+                    {% endif %}
+
+                    {% if not reply.author.is_moderator_of(post.topic) and reply.author.id != post.topic.creator_id %}
+                    {% if reply.author.is_banned_from(post.topic) %}
+                    <button class="comment-action-btn mod-action-btn" style="color:var(--danger);" data-action="unban"
+                        data-user-id="{{ reply.user_id }}" data-topic-id="{{ post.topic_id }}">Unban</button>
+                    {% else %}
+                    <button class="comment-action-btn mod-action-btn" data-action="ban"
+                        data-user-id="{{ reply.user_id }}" data-topic-id="{{ post.topic_id }}">Ban</button>
+                    {% endif %}
+
+                    {% endif %}
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div>{# end .comment-item #}

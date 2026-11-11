@@ -1,0 +1,41 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environments
+venv/
+env/
+ENV/
+.venv/
+env.bak/
+venv.bak/
+
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+
+# Flask & SQLite Database
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Editor & IDE artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+tempCodeRunnerFile.py
+
+# User uploads (dynamic runtime media)
+static/uploads/post_media/*
+!static/uploads/post_media/.gitkeep
+static/uploads/profile_pics/*
+!static/uploads/profile_pics/.gitkeep
+
+# OS generated files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,25 @@
+{# Template: confirm_modal.html #}
+{# Purpose: Renders the confirm_modal view #}
+{#
+   partials/modals/confirm_modal.html – Reusable Confirmation Dialog
+   ===================================================================
+   Used by modal-handler.js for confirming deletions (posts, comments).
+#}
+
+<div id="confirm-modal" class="modal-overlay" style="z-index: 1100;">
+    <div class="modal-box" style="max-width: 360px;">
+        
+        <div class="modal-body" style="padding-top: 2rem;">
+            <span class="confirm-modal-icon">⚠️</span>
+            <div id="confirm-modal-message" class="confirm-modal-text">
+                Are you sure you want to do this?
+            </div>
+            
+            <div style="display:flex; gap:0.5rem; justify-content:center;">
+                <button id="confirm-modal-no" class="btn btn-secondary">Cancel</button>
+                <button id="confirm-modal-yes" class="btn btn-danger">Confirm</button>
+            </div>
+        </div>
+        
+    </div>
+</div>

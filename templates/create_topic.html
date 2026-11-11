@@ -1,0 +1,129 @@
+{# Template: create_topic.html #}
+{# Purpose: Renders the create_topic view #}
+{#
+   create_topic.html – Create a New Topic
+   =========================================
+   Route: GET/POST /t/new
+   Chapter 17: Jinja2, HTML forms with file uploads.
+   Any logged-in user can create a topic and becomes its creator.
+#}
+{% extends 'base.html' %}
+
+{% block title %}Create a Topic{% endblock %}
+{% block meta_desc %}Start a new community topic on dotTopic.{% endblock %}
+
+
+{# ════════════════════════════════════════════════════════════
+   LEFT SIDEBAR – Tips
+   ════════════════════════════════════════════════════════════ #}
+{% block sidebar_left %}
+    <div class="sidebar-card">
+        <h3>Topic Tips</h3>
+        <ul style="font-size:0.82rem; color:var(--text-muted); line-height:2;">
+            <li>• Use a short, descriptive name</li>
+            <li>• Lowercase letters, numbers, hyphens only</li>
+            <li>• You'll be the creator and admin</li>
+            <li>• Add tags later to organize posts</li>
+        </ul>
+    </div>
+{% endblock %}
+
+
+{# ════════════════════════════════════════════════════════════
+   MAIN CONTENT
+   ════════════════════════════════════════════════════════════ #}
+{% block content %}
+
+    <div style="max-width:580px; margin:0 auto;">
+
+        <h1 style="margin-bottom:1.5rem;">Create a New Topic</h1>
+
+        {#
+            enctype="multipart/form-data" is required for file uploads.
+            Chapter 17: Flask request.files
+        #}
+        <form
+            action="{{ url_for('topics.create_topic') }}"
+            method="POST"
+            enctype="multipart/form-data"
+            id="create-topic-form"
+        >
+
+            {# ── Topic Name ── #}
+            <div class="form-group">
+                <label for="topic-name">Topic Name *</label>
+                <input
+                    class="form-input"
+                    type="text"
+                    id="topic-name"
+                    name="name"
+                    placeholder="e.g. gaming, cooking, science"
+                    required
+                    maxlength="50"
+                    pattern="[a-z0-9_-]+"
+                    title="Only lowercase letters, numbers, underscores, and hyphens"
+                >
+                <small style="color:var(--text-dim); font-size:0.78rem;">
+                    This becomes the URL: dotTopic/<strong>.</strong>yourname
+                </small>
+            </div>
+
+            {# ── Description ── #}
+            <div class="form-group">
+                <label for="topic-description">Description</label>
+                <textarea
+                    class="form-textarea"
+                    id="topic-description"
+                    name="description"
+                    placeholder="What is this topic about?"
+                    rows="3"
+                    maxlength="500"
+                ></textarea>
+            </div>
+
+            {# ── Topic Icon (circle photo) ── #}
+            <div class="form-group">
+                <label for="topic-photo">Topic Icon (optional)</label>
+                <input
+                    class="form-input"
+                    type="file"
+                    id="topic-photo"
+                    name="photo"
+                    accept="image/*"
+                    style="padding:0.4rem;"
+                >
+                <small style="color:var(--text-dim); font-size:0.78rem;">
+                    Square image recommended. Displayed as a circle.
+                </small>
+            </div>
+
+            {# ── Banner Image ── #}
+            <div class="form-group">
+                <label for="topic-banner">Banner Image (optional)</label>
+                <input
+                    class="form-input"
+                    type="file"
+                    id="topic-banner"
+                    name="banner"
+                    accept="image/*"
+                    style="padding:0.4rem;"
+                >
+                <small style="color:var(--text-dim); font-size:0.78rem;">
+                    Wide image recommended (e.g. 1200×300px).
+                </small>
+            </div>
+
+            {# ── Submit button ── #}
+            <div style="display:flex; gap:0.75rem; margin-top:0.5rem;">
+                <button type="submit" class="btn btn-primary">
+                    ✨ Create Topic
+                </button>
+                <a href="{{ url_for('main.home') }}" class="btn btn-secondary">
+                    Cancel
+                </a>
+            </div>
+
+        </form>
+    </div>
+
+{% endblock %}

@@ -1,0 +1,24 @@
+{# Template: alert_modal.html #}
+{# Purpose: Renders the alert_modal view #}
+{#
+   partials/modals/alert_modal.html – Reusable Alert Dialog
+   ===================================================================
+   Used by modal-handler.js for showing generic alerts instead of native alert().
+#}
+
+<div id="alert-modal" class="modal-overlay" style="z-index: 1200;">
+    <div class="modal-box" style="max-width: 360px;">
+        
+        <div class="modal-body" style="padding-top: 2rem;">
+            <span class="confirm-modal-icon">ℹ️</span>
+            <div id="alert-modal-message" class="confirm-modal-text">
+                An error occurred.
+            </div>
+            
+            <div style="display:flex; gap:0.5rem; justify-content:center;">
+                <button id="alert-modal-ok" class="btn btn-primary" onclick="closeModal('alert-modal')">OK</button>
+            </div>
+        </div>
+        
+    </div>
+</div>

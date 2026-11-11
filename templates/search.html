@@ -1,0 +1,125 @@
+{# Template: search.html #}
+{# Purpose: Renders the search view #}
+{#
+search.html – Search Results Page
+=====================================
+Route: /search?q=<query>
+    Chapter 17: Jinja2, Chapter 20: GET query parameters.
+    #}
+    {% extends 'base.html' %}
+
+    {% block title %}Search: {{ query }}{% endblock %}
+    {% block meta_desc %}Search results for "{{ query }}" on dotTopic.{% endblock %}
+
+
+    {# ════════════════════════════════════════════════════════════
+    LEFT SIDEBAR
+    ════════════════════════════════════════════════════════════ #}
+    {% block sidebar_left %}
+    {% endblock %}
+
+
+    {# ════════════════════════════════════════════════════════════
+    MAIN CONTENT
+    ════════════════════════════════════════════════════════════ #}
+    {% block content %}
+
+    {# ── Search Header ── #}
+    <div class="search-header">
+        {% if query %}
+        <h2>Results for <strong>"{{ query }}"</strong></h2>
+        <p style="font-size:0.85rem; color:var(--text-dim); margin-top:0.25rem;">
+            Found {{ matching_topics | length }} topic{{ 's' if matching_topics | length != 1 else '' }}
+            and {{ matching_posts | length }} post{{ 's' if matching_posts | length != 1 else '' }}.
+        </p>
+        {% else %}
+        <h2>Search dotTopic</h2>
+        <p style="font-size:0.85rem; color:var(--text-dim); margin-top:0.25rem;">
+            Type something in the search bar above to find posts and topics.
+        </p>
+        {% endif %}
+    </div>
+
+    {# ── Show message if no results at all ── #}
+    {% if query and not matching_topics and not matching_posts %}
+    <div class="no-results">
+        <span class="emoji">🔍</span>
+        <p>Nothing found for <strong>"{{ query }}"</strong></p>
+        <p style="font-size:0.85rem; margin-top:0.5rem;">
+            Try different keywords or check your spelling.
+        </p>
+    </div>
+
+    {% else %}
+
+    {# ══════════════════════════════════════════════════════
+    MATCHING TOPICS
+    ══════════════════════════════════════════════════════ #}
+    {% if matching_topics %}
+    <div class="search-section-title">
+        🗂️ Topics matching "{{ query }}"
+    </div>
+
+    {% for topic in matching_topics %}
+    <a href="{{ url_for('topics.topic_page', topic_name=topic.name) }}" class="topic-result-card">
+
+        {# Topic icon #}
+        {% if topic.photo %}
+        <img class="topic-result-icon" src="{{ url_for('static', filename=topic.photo) }}" alt="{{ topic.name }}">
+        {% else %}
+        <div class="topic-result-icon topic-photo-fallback"
+            style="width:48px; height:48px; font-size:1.1rem; border-radius:8px;">
+            {{ topic.name[0].upper() }}
+        </div>
+        {% endif %}
+
+        <div class="topic-result-info">
+            <div class="name">.{{ topic.name }}</div>
+            <div class="desc">
+                {{ topic.description[:80] if topic.description else 'No description.' }}
+                {% if topic.description and topic.description | length > 80 %}...{% endif %}
+            </div>
+        </div>
+
+        <span style="color:var(--text-dim); font-size:0.82rem; margin-left:auto;">
+            {{ topic.subscriber_count }} members
+        </span>
+    </a>
+    {% endfor %}
+
+    <div class="divider"></div>
+    {% endif %}
+
+
+    {# ══════════════════════════════════════════════════════
+    MATCHING POSTS
+    ══════════════════════════════════════════════════════ #}
+    {% if matching_posts %}
+    <div class="search-section-title" {% if matching_topics %}style="margin-top:1rem;" {% endif %}>
+        📝 Posts matching "{{ query }}"
+    </div>
+
+    <div class="post-grid">
+        {% for post in matching_posts %}
+        {% include 'partials/post_card.html' %}
+        {% endfor %}
+    </div>
+
+    {% elif query and matching_topics %}
+    {# Topics found but no posts #}
+    <div class="search-section-title" style="margin-top:1rem;">📝 Posts</div>
+    <p style="font-size:0.875rem; color:var(--text-dim); padding:1rem 0;">
+        No posts matched your search.
+    </p>
+    {% endif %}
+
+    {% endif %}
+
+    {% endblock %}
+
+
+    {# ════════════════════════════════════════════════════════════
+    RIGHT SIDEBAR
+    ════════════════════════════════════════════════════════════ #}
+    {% block sidebar_right %}
+    {% endblock %}

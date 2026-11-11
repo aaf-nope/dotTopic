@@ -1,0 +1,100 @@
+{# Template: login_modal.html #}
+{# Purpose: Renders the login_modal view #}
+{#
+   partials/modals/login_modal.html – Authentication Modal (Login & Register)
+   =============================================================================
+   Chapter 4: CSS Modal Popup.
+   Contains both login and registration forms, toggled via JavaScript.
+#}
+
+<div id="auth-modal" class="modal-overlay">
+    <div class="modal-box">
+
+        {# ── Modal Header ── #}
+        <div class="modal-header">
+            <h2>Welcome to dotTopic</h2>
+            <button class="modal-close" onclick="closeModal('auth-modal')" title="Close">✕</button>
+        </div>
+
+        <div class="modal-body">
+            {# ── Auth Tabs (JavaScript switches between them) ── #}
+            <div class="auth-tabs">
+                <button class="auth-tab-btn active" data-panel="login">Log In</button>
+                <button class="auth-tab-btn" data-panel="register">Register</button>
+            </div>
+
+            {# ══════════════════════════════════════════════════════════
+               LOGIN FORM
+               ══════════════════════════════════════════════════════════ #}
+            <div id="panel-login" class="auth-form-panel active">
+                <form action="{{ url_for('auth.login') }}" method="POST">
+                    
+                    {# Add ?next= to redirect back to current page after login #}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+
+                    <div class="form-group">
+                        <label for="login-identifier">Username or Email</label>
+                        <input class="form-input" type="text" id="login-identifier" name="identifier" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input class="form-input" type="password" id="login-password" name="password" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full mt-1">
+                        Log In
+                    </button>
+                </form>
+            </div>
+
+            {# ══════════════════════════════════════════════════════════
+               REGISTER FORM
+               ══════════════════════════════════════════════════════════ #}
+            <div id="panel-register" class="auth-form-panel">
+                <form action="{{ url_for('auth.register') }}" method="POST" id="register-form">
+
+                    <div class="form-group">
+                        <label for="reg-username">Username</label>
+                        <input class="form-input" type="text" id="reg-username" name="username" 
+                               required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]+" 
+                               title="Letters, numbers, and underscores only.">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reg-email">Email Address</label>
+                        <input class="form-input" type="email" id="reg-email" name="email" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reg-password">Password</label>
+                        <input class="form-input" type="password" id="reg-password" name="password" 
+                               required minlength="6">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reg-password2">Confirm Password</label>
+                        <input class="form-input" type="password" id="reg-password2" name="password2" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full mt-1">
+                        Create Account
+                    </button>
+                </form>
+                
+                {# Client-side validation for password match (Chapter 12) #}
+                <script>
+                    document.getElementById('register-form').addEventListener('submit', function(e) {
+                        var p1 = document.getElementById('reg-password').value;
+                        var p2 = document.getElementById('reg-password2').value;
+                        if (p1 !== p2) {
+                            e.preventDefault();
+                            showAlert("Passwords do not match.");
+                        }
+                    });
+                </script>
+            </div>
+
+        </div>{# end .modal-body #}
+    </div>{# end .modal-box #}
+</div>

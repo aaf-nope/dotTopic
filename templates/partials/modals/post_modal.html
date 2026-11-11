@@ -1,0 +1,75 @@
+{# Template: post_modal.html #}
+{# Purpose: Renders the post_modal view #}
+{#
+   partials/modals/post_modal.html – Create / Edit Post Modal
+   ============================================================
+   Chapter 4: Modal UI. Chapter 17: file uploads (enctype).
+   Reused for both creating a new post and editing an existing one.
+#}
+
+<div id="post-modal" class="modal-overlay">
+    <div class="modal-box wide">
+
+        <div class="modal-header">
+            <h2 id="post-modal-title">Create Post</h2>
+            <button class="modal-close" onclick="closeModal('post-modal')" title="Close">✕</button>
+        </div>
+
+        <div class="modal-body">
+            {# Action is set dynamically by JavaScript #}
+            <form id="post-form" action="" method="POST" enctype="multipart/form-data">
+                
+                {# Read-only Info Row #}
+                <div class="post-modal-info">
+                    <span class="topic-badge">.{{ topic.name if topic else 'topic' }}</span>
+                    <span>Posting as <strong>{{ current_user.username }}</strong></span>
+                </div>
+
+                {# Title #}
+                <div class="form-group">
+                    <input class="form-input" type="text" id="post-title-input" name="title" 
+                           placeholder="Title" required style="font-size:1.1rem; font-weight:600;">
+                </div>
+
+                {% if topic and topic.tags %}
+                <div class="form-group">
+                    <label>Tags</label>
+                    <div id="tag-pills" class="tag-pills-container">
+                        {% for tag in topic.tags %}
+                        <button type="button" class="tag-pill" data-tag-id="{{ tag.id }}">
+                            {{ tag.name }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {# Content Textarea #}
+                <div class="form-group">
+                    <textarea class="form-textarea" id="post-content-input" name="content" 
+                              placeholder="Text (optional)" rows="6"></textarea>
+                </div>
+
+                {# Media Upload #}
+                <div class="form-group" style="margin-top:1rem;">
+                    <div id="existing-media" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;"></div>
+                    <div id="new-media-preview" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;"></div>
+                    
+                    <div class="file-input-wrapper">
+                        <button type="button" class="btn btn-secondary btn-sm" style="pointer-events:none;">
+                            🖼️ Add Images / Video
+                        </button>
+                        <input type="file" id="media-input" accept="image/*,video/*">
+                    </div>
+                </div>
+
+                <div class="modal-footer" style="padding: 1.5rem 0 0 0; border-top: 1px solid var(--border); margin-top: 1rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('post-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+
+            </form>
+        </div>
+        
+    </div>
+</div>

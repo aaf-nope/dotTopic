@@ -1,0 +1,443 @@
+{# Template: topic.html #}
+{# Purpose: Renders the topic view #}
+{#
+topic.html – Topic Page
+=========================
+Chapter 17: Jinja2 conditionals, loops, template inheritance.
+Route: /t/<topic_name>
+    #}
+    {% extends 'base.html' %}
+
+    {% block title %}.{{ topic.name }}{% endblock %}
+    {% block meta_desc %}{{ topic.description or ('Posts and discussions in .' + topic.name) }}{% endblock %}
+
+    {# ════════════════════════════════════════════════════════════
+    LEFT SIDEBAR – Topic moderator tools + stats
+    ════════════════════════════════════════════════════════════ #}
+    {% block sidebar_left %}
+    <div class="sidebar-card">
+        <h3>About</h3>
+        <p id="topic-description-text" style="font-size:0.85rem; color:var(--text-muted);">
+            {{ topic.description or 'No description yet.' }}
+        </p>
+        {% if current_user.is_authenticated and (current_user.id == topic.creator_id or
+        current_user.is_moderator_of(topic) or current_user.is_super_admin) %}
+        <button class="btn btn-secondary btn-sm"
+            style="margin-top:0.5rem; font-size:0.75rem; padding:0.2rem 0.6rem; background:var(--primary); color:#fff; border:none; border-radius:var(--radius-xs); cursor:pointer;"
+            onclick="openModal('edit-description-modal')">
+            ✏️ Edit Description
+        </button>
+        {% endif %}
+    </div>
+
+    <div class="sidebar-card">
+        <h3>Topic Details</h3>
+        <p style="font-size:0.82rem; color:var(--text-dim); margin-bottom:0.25rem;">
+            Created by: {{ topic.creator.username }}
+        </p>
+        <p style="font-size:0.82rem; color:var(--text-dim); margin-bottom:0.25rem;">
+            Members: {{ topic.subscriber_count }}
+        </p>
+        <p style="font-size:0.82rem; color:var(--text-dim);">
+            Moderators: {{ topic.moderators|length }}
+        </p>
+        {% if topic.moderators %}
+        <ul
+            style="list-style-type:none; margin:0.25rem 0 0 0.5rem; padding:0; font-size:0.82rem; color:var(--text-dim);">
+            {% for mod in topic.moderators %}
+            <li>&bull; {{ mod.user.username }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+    {% endblock %}
+
+
+    {# ════════════════════════════════════════════════════════════
+    MAIN CONTENT – Banner, header, posts
+    ════════════════════════════════════════════════════════════ #}
+    {% block content %}
+
+    {# ── Topic Banner Image ── #}
+    <div class="topic-banner-wrapper" style="position:relative;">
+        <img class="topic-banner" src="{{ url_for('static', filename=topic.banner or 'default_banner.png') }}" alt="{{ topic.name }} banner">
+
+        {% if current_user.is_authenticated and (is_moderator or current_user.id == topic.creator_id or
+        current_user.is_super_admin) %}
+        <button onclick="openModal('edit-topic-images-modal')"
+            style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.6); border:none; color:white; border-radius:50%; width:32px; height:32px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 5px rgba(0,0,0,0.3);"
+            title="Edit Banner &amp; Photo">
+            ✏️
+        </button>
+        <button id="reset-topic-images-btn"
+            style="position:absolute; top:10px; right:52px; background:rgba(0,0,0,0.6); border:none; color:white; border-radius:50%; width:32px; height:32px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 5px rgba(0,0,0,0.3);"
+            title="Reset Images to Defaults">
+            🗑️
+        </button>
+        {% endif %}
+    </div>
+
+
+    {# ── Topic Header: Icon + Name + Subscribe/Post buttons ── #}
+    <div class="topic-header">
+
+        {# Topic icon (circle) #}
+        <img class="topic-icon" src="{{ url_for('static', filename=topic.photo or 'default_topic.png') }}" alt="{{ topic.name }} icon">
+
+        {# Name + subscriber count #}
+        <div class="topic-info">
+            <h1><span class="topic-name-text">{{ topic.name }}</span></h1>
+            <p class="sub-count">
+                <span id="subscriber-count">{{ topic.subscriber_count }}</span> members
+            </p>
+        </div>
+
+        {# ── Action buttons (only for logged-in users) ── #}
+        {% if current_user.is_authenticated %}
+        <div class="topic-actions">
+
+            {% if is_banned %}
+            {# Banned users can only unsubscribe #}
+            {% if is_subscribed %}
+            <button id="subscribe-btn" class="btn btn-danger" data-topic-id="{{ topic.id }}">
+                Unsubscribe
+            </button>
+            {% endif %}
+            {% else %}
+            {# Subscribe toggle button #}
+            {% if current_user.id != topic.creator_id %}
+            <button id="subscribe-btn" class="btn btn-subscribe {% if is_subscribed %}subscribed{% endif %}"
+                data-topic-id="{{ topic.id }}">
+                {% if is_subscribed %}✓ Subscribed{% else %}+ Subscribe{% endif %}
+            </button>
+            {% endif %}
+
+            {# Create Post button (opens modal) #}
+            {% if is_subscribed or is_moderator %}
+            <button class="btn btn-primary" onclick="openCreatePostModal('{{ topic.name }}')">
+                ✏️ Post
+            </button>
+            {% endif %}
+            {% endif %}
+
+        </div>
+        {% endif %}
+    </div>
+
+    {# ── Topic description removed ── #}
+
+    {# ── Tag Filter Bar ── #}
+    {% if topic.tags %}
+    <div class="tag-filter-bar" style="display:flex; gap:0.5rem; margin:1rem 0; flex-wrap:wrap;">
+        <a href="{{ url_for('topics.topic_page', topic_name=topic.name, sort=sort_option) }}"
+            class="tag-pill {% if not current_tag %}active{% endif %}">
+            All
+        </a>
+        {% for tag in topic.tags %}
+        <a href="{{ url_for('topics.topic_page', topic_name=topic.name, sort=sort_option, tag=tag.name) }}"
+            class="tag-pill {% if current_tag == tag.name %}active{% endif %}">
+            {{ tag.name }}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {# ── Sort Bar ── #}
+    <div class="sort-bar">
+        <span>Sort by:</span>
+
+        <a class="sort-btn {% if sort_option == 'newest' %}active{% endif %}"
+            href="{{ url_for('topics.topic_page', topic_name=topic.name, sort='newest', tag=current_tag) }}">
+            🕐 Newest
+        </a>
+        <a class="sort-btn {% if sort_option == 'oldest' %}active{% endif %}"
+            href="{{ url_for('topics.topic_page', topic_name=topic.name, sort='oldest', tag=current_tag) }}">
+            📅 Oldest
+        </a>
+        <a class="sort-btn {% if sort_option == 'top' %}active{% endif %}"
+            href="{{ url_for('topics.topic_page', topic_name=topic.name, sort='top', tag=current_tag) }}">
+            🏆 Top
+        </a>
+    </div>
+
+    {# ── Banned notice ── #}
+    {% if current_user.is_authenticated and is_banned %}
+    <div class="flash-message flash-danger" style="margin-bottom:1rem;">
+        🚫 You are banned from posting or commenting in this topic.
+    </div>
+    {% endif %}
+
+    {# ── Post List ── #}
+    {% if posts %}
+    <div class="post-grid">
+        {% for post in posts %}
+        {% include 'partials/post_card.html' %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <span class="empty-icon">📝</span>
+        <p>No posts yet. Be the first to post!</p>
+    </div>
+    {% endif %}
+
+    {# ── Create Tag Modal ── #}
+    <div id="create-tag-modal" class="modal-overlay" onclick="closeModalOnOutsideClick(event, 'create-tag-modal')">
+        <div class="modal-box" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Create New Tag</h2>
+                <button class="modal-close" onclick="closeModal('create-tag-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Tag Name</label>
+                    <input type="text" id="new-tag-input" class="form-input" placeholder="e.g., Guide">
+                </div>
+                <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1.5rem;">
+                    <button class="btn btn-secondary" onclick="closeModal('create-tag-modal')">Cancel</button>
+                    <button class="btn btn-primary" onclick="submitNewTag('{{ topic.id }}')">Add Tag</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Edit Topic Images Modal ── #}
+    <div id="edit-topic-images-modal" class="modal-overlay"
+        onclick="closeModalOnOutsideClick(event, 'edit-topic-images-modal')">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2 class="modal-title">Edit Topic Images</h2>
+                <button class="modal-close" onclick="closeModal('edit-topic-images-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('topics.edit_topic_images', topic_name=topic.name) }}" method="POST"
+                    enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label class="form-label">Topic Photo (Icon)</label>
+                        <input type="file" name="photo" class="form-input" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Topic Banner</label>
+                        <input type="file" name="banner" class="form-input" accept="image/*">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%; margin-top:1rem;">Save
+                        Images</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# ── Delete Topic Modal (Double Confirmation) ── #}
+    {% if current_user.is_authenticated and current_user.id == topic.creator_id %}
+    <div id="delete-topic-modal" class="modal-overlay" onclick="closeModalOnOutsideClick(event, 'delete-topic-modal')">
+        <div class="modal-box" style="max-width: 420px;">
+            <div class="modal-header">
+                <h2 class="modal-title" style="color:var(--danger);">🗑️ Delete Topic</h2>
+                <button class="modal-close" onclick="closeModal('delete-topic-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                {# Step 1: First confirmation #}
+                <div id="delete-topic-step1">
+                    <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:1.25rem;">
+                        Are you sure you want to delete <strong style="color:var(--danger);">.{{ topic.name }}</strong>?
+                        This cannot be undone.
+                    </p>
+                    <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+                        <button class="btn btn-secondary" onclick="closeModal('delete-topic-modal')">Cancel</button>
+                        <button class="btn btn-danger"
+                            onclick="document.getElementById('delete-topic-step1').style.display='none'; document.getElementById('delete-topic-step2').style.display='block';">I
+                            understand, continue</button>
+                    </div>
+                </div>
+
+                {# Step 2: Type DELETE to confirm #}
+                <div id="delete-topic-step2" style="display:none;">
+                    <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:0.75rem;">
+                        Type <strong style="color:var(--danger);">DELETE</strong> to confirm:
+                    </p>
+                    <input type="text" id="delete-topic-confirm-input" class="form-input" placeholder="Type DELETE here"
+                        style="margin-bottom:1rem;">
+                    <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+                        <button class="btn btn-secondary" onclick="closeModal('delete-topic-modal')">Cancel</button>
+                        <button class="btn btn-danger" id="delete-topic-forever-btn"
+                            onclick="confirmDeleteTopic('{{ topic.id }}')">Delete Forever</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Edit Description Modal ── #}
+    <div id="edit-description-modal" class="modal-overlay"
+        onclick="closeModalOnOutsideClick(event, 'edit-description-modal')">
+        <div class="modal-box" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Edit Description</h2>
+                <button class="modal-close" onclick="closeModal('edit-description-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <textarea id="edit-desc-textarea" class="form-textarea" rows="5"
+                        style="width:100%;">{{ topic.description or '' }}</textarea>
+                </div>
+                <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1rem;">
+                    <button class="btn btn-secondary" onclick="closeModal('edit-description-modal')">Cancel</button>
+                    <button id="save-description-btn" class="btn btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    {# ── Reset Images Confirmation Modal ── #}
+    <div id="reset-images-modal" class="hidden">
+        <div class="modal-box" style="max-width:420px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Reset Topic Images</h2>
+                <button class="modal-close" onclick="closeResetModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.25rem;">Reset the topic photo and banner back to their defaults? This cannot be undone.</p>
+                <div style="display:flex; gap:8px; justify-content:flex-end;">
+                    <button onclick="closeResetModal()" class="btn btn-secondary">Cancel</button>
+                    <button id="confirm-reset-images" class="btn btn-danger">Reset Images</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% endblock %}
+
+
+    {# ════════════════════════════════════════════════════════════
+    RIGHT SIDEBAR – Topic info
+    ════════════════════════════════════════════════════════════ #}
+    {% block sidebar_right %}
+    {% if current_user.is_authenticated and (is_moderator or current_user.id == topic.creator_id or
+    current_user.is_super_admin) %}
+    <div class="sidebar-card">
+        <h3>Mod Tools</h3>
+        <button class="btn btn-secondary btn-sm" style="width:100%; margin-bottom:1rem;"
+            onclick="openModal('create-tag-modal')">
+            + Create New Tag
+        </button>
+        <div style="font-size:0.82rem; color:var(--text-dim); margin-bottom:0.5rem;">Tags:</div>
+        <div class="post-tags" id="topic-tags-list">
+            {% for tag in topic.tags %}
+            <span class="tag-chip" id="tag-{{ tag.id }}">
+                {{ tag.name }}
+                <span style="cursor:pointer; margin-left:4px;"
+                    onclick="deleteTag({{ tag.id }}, {{ topic.id }})">✕</span>
+            </span>
+            {% else %}
+            <span style="font-size:0.8rem; color:var(--text-muted);" id="no-tags-msg">None</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="sidebar-card">
+        <h3>Banned Users</h3>
+        <div id="banned-users-list">
+            {% if topic.banned_users %}
+            <ul style="list-style-type:none; margin:0; padding:0; font-size:0.82rem; color:var(--text-dim);">
+                {% for banned in topic.banned_users %}
+                <li style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;"
+                    id="banned-user-{{ banned.user_id }}">
+                    <span>&bull; {{ banned.user.username }}</span>
+                    <button class="btn btn-secondary btn-sm" style="padding:0.1rem 0.4rem; font-size:0.7rem;"
+                        onclick="unbanUser({{ banned.user_id|int }}, {{ topic.id|int }})">Unban</button>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div style="font-size:0.82rem; color:var(--text-muted);">None</div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ── Delete Topic (Creator only) ── #}
+    {% if current_user.id == topic.creator_id %}
+    <div class="sidebar-card" style="border-color: var(--danger);">
+        <h3 style="color: var(--danger);">Danger Zone</h3>
+        <button class="btn btn-danger" style="width:100%;" onclick="openModal('delete-topic-modal')">
+            🗑️ Delete Topic
+        </button>
+    </div>
+    {% endif %}
+    {% endif %}
+    {% endblock %}
+
+
+    {# ════════════════════════════════════════════════════════════
+    EXTRA SCRIPTS – Pass topic name to the post modal
+    ════════════════════════════════════════════════════════════ #}
+    {% block extra_scripts %}
+    <script>
+        // Pre-set the topic name for the post modal's form action
+        // (used by openCreatePostModal in modal-handler.js)
+        var currentTopicName = "{{ topic.name }}";
+
+        // Also populate the topic tags dropdown in the post modal
+        var topicTags = {{ topic.tags | map(attribute = 'id') | list | tojson }};
+
+        // ── Edit Description AJAX ──
+        $('#save-description-btn').on('click', function () {
+            var newDesc = $('#edit-desc-textarea').val().trim();
+            if (!newDesc) {
+                showAlert('Description cannot be empty.');
+                return;
+            }
+            var $btn = $(this);
+            $btn.prop('disabled', true).text('Saving...');
+            $.ajax({
+                url: '/t/{{ topic.name }}/edit_description',
+                method: 'POST',
+                data: { description: newDesc },
+                success: function (res) {
+                    if (res.status === 'success') {
+                        location.reload();
+                    } else {
+                        showAlert('Error: ' + (res.message || 'Unknown error'));
+                        $btn.prop('disabled', false).text('Save');
+                    }
+                },
+                error: function (xhr) {
+                    showAlert(xhr.responseJSON?.message || 'An error occurred.');
+                    $btn.prop('disabled', false).text('Save');
+                }
+            });
+        });
+        // ── Reset Topic Images – modal logic ──
+        function closeResetModal() {
+            $('#reset-images-modal').addClass('hidden');
+        }
+
+        $('#reset-topic-images-btn').on('click', function () {
+            $('#reset-images-modal').removeClass('hidden');
+        });
+
+        $('#confirm-reset-images').on('click', function () {
+            var $btn = $(this);
+            $btn.prop('disabled', true).text('Resetting...');
+            $.ajax({
+                url: '/t/{{ topic.name }}/reset_images',
+                method: 'POST',
+                success: function (res) {
+                    if (res.status === 'success') {
+                        location.reload();
+                    } else {
+                        showAlert('Failed to reset images.');
+                        $btn.prop('disabled', false).text('Reset Images');
+                        closeResetModal();
+                    }
+                },
+                error: function () {
+                    showAlert('An error occurred while resetting images.');
+                    $btn.prop('disabled', false).text('Reset Images');
+                    closeResetModal();
+                }
+            });
+        });
+    </script>
+    {% endblock %}
